@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#07080a">
+<meta name="format-detection" content="telephone=no">
+<title>Meet Clara - Mystery House</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+  :root { --bg:#07080a; --ink:#d9d3c7; --dim:#8a8478; --blood:#8c1d1d; --blood2:#b32626; }
+  * { box-sizing:border-box; }
+  html,body { height:100%; margin:0; overscroll-behavior:none; -webkit-text-size-adjust:100%; -webkit-tap-highlight-color:transparent; background:var(--bg); color:var(--ink); font-family:Georgia,'Times New Roman',serif; }
+  .wrap { display:grid; grid-template-columns: minmax(280px, 1.05fr) minmax(300px, 0.95fr); height:100%; max-width:1200px; margin:0 auto; }
+  @supports (height:100dvh) { html,body,.wrap { height:100dvh; } }   /* dynamic viewport: no jump when the mobile URL bar shows/hides */
+  .stage { position:relative; min-height:0; background:radial-gradient(ellipse at 50% 35%, #1b1514 0%, #0b0a0a 55%, #050505 100%); overflow:hidden; }
+  #c { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  .vignette { position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 50% 40%, transparent 45%, rgba(0,0,0,.75) 100%); }
+  .loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--dim); font-style:italic; transition:opacity .6s; text-align:center; padding:0 24px; }
+  .loading.done { opacity:0; pointer-events:none; }
+  .panel { display:flex; flex-direction:column; padding:28px 24px calc(20px + env(safe-area-inset-bottom)); gap:14px; min-height:0; }
+  h1 { margin:0; font-weight:normal; letter-spacing:.18em; text-transform:uppercase; font-size:13px; color:var(--dim); }
+  h2 { margin:2px 0 0; font-weight:normal; font-size:clamp(26px,4vw,38px); letter-spacing:.02em; }
+  .sub { color:var(--dim); font-size:15px; line-height:1.4; margin:0; }
+  .row { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  button { font:inherit; cursor:pointer; }
+  #talk { min-height:52px; touch-action:manipulation; background:var(--blood); color:#f6efe4; border:1px solid #5a1010; padding:14px 26px; font-size:18px; letter-spacing:.04em; border-radius:2px; box-shadow:0 0 0 0 rgba(179,38,38,.5); transition:background .2s, transform .1s; }
+  #talk:hover { background:var(--blood2); } #talk:active { transform:translateY(1px); }
+  #talk[disabled] { opacity:.55; cursor:wait; }
+  #talk.live { background:#222; border-color:#444; color:var(--ink); }
+  #talk.live::before { content:''; display:inline-block; width:9px; height:9px; margin-right:10px; border-radius:50%; background:var(--blood2); animation:pulse 1.4s infinite; }
+  @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(179,38,38,.7)} 100%{box-shadow:0 0 0 10px rgba(179,38,38,0)} }
+  #status { color:var(--dim); font-size:14px; font-style:italic; min-height:1.3em; }
+  #log { flex:1; min-height:120px; overflow-y:auto; border-top:1px solid #1f1c1a; border-bottom:1px solid #1f1c1a; padding:10px 2px; display:flex; flex-direction:column; gap:10px; scroll-behavior:smooth; }
+  .msg { font-size:16px; line-height:1.45; max-width:92%; }
+  .msg .who { display:block; font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); margin-bottom:1px; }
+  .msg.clara { align-self:flex-start; } .msg.clara .t { color:#efe6d4; }
+  .msg.you { align-self:flex-end; text-align:right; } .msg.you .t { color:#b9b2a4; }
+  .msg.sys { align-self:center; color:var(--dim); font-size:13px; font-style:italic; text-align:center; }
+  form { display:flex; gap:8px; } form[hidden] { display:flex; visibility:hidden; }   /* keeps its space reserved: no layout jump when it appears */
+  #typeonly { background:none; border:0; color:var(--dim); text-decoration:underline; text-underline-offset:3px; font-size:14px; padding:12px 6px; min-height:44px; }
+  #txt { flex:1; background:#111; color:var(--ink); border:1px solid #2a2623; padding:12px; min-height:48px; font:inherit; font-size:16px; border-radius:2px; }
+  #send { background:#1b1917; color:var(--ink); border:1px solid #2f2b27; padding:0 18px; min-width:72px; min-height:48px; border-radius:2px; }
+  .fine { color:#5f5a52; font-size:12px; line-height:1.4; margin:0; }
+  .fine a { color:#7b756a; }
+  .test-badge { position:absolute; top:10px; left:12px; font:11px/1 ui-monospace,monospace; color:#6a6258; letter-spacing:.1em; }
+  @media (max-width:760px) {
+    .wrap { grid-template-columns:1fr; grid-template-rows: minmax(200px, 40%) minmax(0, 1fr); }
+    .panel { overflow-y:auto; } #log { min-height:84px; } #talk { padding:12px 14px; white-space:nowrap; font-size:17px; }
+    .panel { padding:12px calc(16px + env(safe-area-inset-right)) calc(14px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left)); gap:10px; }
+    h2 { font-size:26px; } .sub { font-size:14px; }
+    .row { flex-wrap:nowrap; } #talk { flex:1.4 1 0; min-width:190px; } #status { flex:1 1 0; min-width:0; }
+    .test-badge { top:calc(10px + env(safe-area-inset-top)); }
+    .fine { font-size:11px; }
+  }
+  @media (max-width:900px) and (max-height:520px) and (orientation:landscape) {   /* phone held sideways */
+    .wrap { grid-template-columns: 46% 54%; grid-template-rows:100%; }
+    .panel { padding:10px calc(14px + env(safe-area-inset-right)) 10px 14px; gap:8px; overflow-y:auto; } .sub, .fine { display:none; } h2 { font-size:22px; }
+  }
+  /* ---- embed mode (inside an iframe on guillotine.tv): hide the duplicate heading, match the site palette ---- */
+  html.embed { --bg:#0e020b; --ink:#ece5f5; --dim:#b3a4c7; }
+  html.embed .hd, html.embed .sub, html.embed .test-badge { display:none; }
+  html.embed .panel { padding-top:16px; }
+  html.embed .stage { background:radial-gradient(ellipse at 50% 35%, #231030 0%, #0e020b 60%, #07030b 100%); }
+  html.embed #talk { background:linear-gradient(90deg,#6d34e0,#a02bd0 55%,#c8326c); border:0; border-radius:4px; font:800 .9rem system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif; letter-spacing:.14em; text-transform:uppercase; }
+  html.embed #talk.live { background:#1d0f29; border:1px solid #3a1f55; }
+  html.embed #txt, html.embed #send { border-radius:4px; border-color:#3a1f55; background:#170a1f; }
+  html.embed #log { border-color:#3a1f55; }
+  html.embed .fine { color:#8d7ea3; } html.embed .fine a { color:#c58bff; }
+  @media (prefers-reduced-motion: reduce) { #talk.live::before { animation:none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section class="stage" aria-label="Clara, animated character">
+    <canvas id="c" aria-hidden="true"></canvas>
+    <div class="vignette"></div>
+    <div class="loading" id="loading">Lighting a match...</div>
+  </section>
+  <section class="panel">
+    <div class="hd">
+      <h1>Mystery House &middot; May 5, 1980</h1>
+      <h2>Meet Clara</h2>
+    </div>
+    <p class="sub">She's about to go into the house. Ask her about the game. She won't tell you how it ends.</p>
+    <div class="row">
+      <button id="talk" type="button">Talk to Clara</button>
+      <button id="typeonly" type="button">or type instead</button>
+      <span id="status" role="status" aria-live="polite">Ready when you are.</span>
+    </div>
+    <div id="log" role="log" aria-live="polite" aria-label="Conversation transcript"></div>
+    <form id="textform" hidden autocomplete="off">
+      <input id="txt" type="text" maxlength="300" placeholder="Type to Clara instead..." aria-label="Type a message to Clara">
+      <button id="send" type="submit">Send</button>
+    </form>
+    <p class="fine">Clara is an AI version of the game's character. Your voice is sent to ElevenLabs to power the conversation. Conversations end after about five minutes.
+      <a href="https://store.steampowered.com/app/3108560/" target="_blank" rel="noopener">Wishlist Mystery House on Steam</a>.</p>
+  </section>
+</div>
+
+<script src="./config.js"></script>
+<script>if (/[?&]embed(=1|&|$)/.test(location.search)) document.documentElement.classList.add("embed");</script>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/meshopt_decoder.module.js';
+import { Conversation } from './vendor/elevenlabs-client.js';
+import { LipSync, MORPH_NAMES, JAW_BONE_MAX_RAD, resampleVoiceRange } from './clara-lipsync.js';
+
+// ---------------------------------------------------------------- config
+const qs = new URLSearchParams(location.search);
+const CONFIG = Object.assign({
+  agentId: 'agent_5601m5t7xsxde0jsk4c63m4trqbd',   // public agent id (test agent). Swap for a signed-URL fetch in production, see README.
+  signedUrlEndpoint: null,                          // e.g. 'https://your-server/clara-signed-url' -> returns {signed_url}
+  connectionType: 'websocket',
+  glb: './clara_web_v2.glb',
+  glbMobile: './clara_web_mobile.glb',
+}, window.CLARA_CONFIG || {});
+if (qs.get('agent')) CONFIG.agentId = qs.get('agent');
+if (qs.get('conn')) CONFIG.connectionType = qs.get('conn');
+const DEBUG = qs.has('debug') || qs.has('selftest');
+// phone/tablet-class devices get the light GLB (5 MB instead of 21 MB, same meshes/materials/hair, smaller textures, only the morphs the page drives)
+const IS_MOBILE = qs.get('glb') === 'mobile' || (qs.get('glb') !== 'full' && (matchMedia('(pointer:coarse)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)));
+if (IS_MOBILE && CONFIG.glbMobile) CONFIG.glb = CONFIG.glbMobile;
+if (qs.get('glb') === 'full' && CONFIG.glbFull) CONFIG.glb = CONFIG.glbFull;
+window.__isMobile = IS_MOBILE;
+if (qs.has('norender')) window.__noRender = true;   // test-only: skip drawing so software-GL doesn't starve the audio-timed self-test
+
+// ---------------------------------------------------------------- three.js scene
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: DEBUG });
+let PR_MAX = Math.min(devicePixelRatio || 1, 2), pr = PR_MAX;   // cap at 2: a 3x iPhone screen would cost 2.25x the pixels for no visible gain
+if (qs.get('pr')) pr = PR_MAX = +qs.get('pr');
+renderer.setPixelRatio(pr);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(24, 1, 0.05, 20);
+
+// moody lighting: dim cool fill, warm key (candle-ish) from the side, red-ish rim from behind
+scene.add(new THREE.HemisphereLight(0x8892a8, 0x1a1412, 0.55));
+const key = new THREE.DirectionalLight(0xffd9ad, 2.1); key.position.set(-1.2, 1.8, 2.4); scene.add(key);
+const fill = new THREE.DirectionalLight(0x6b7fa8, 0.55); fill.position.set(2, 0.5, 1.5); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xb04030, 1.6); rim.position.set(1.2, 1.6, -2); scene.add(rim);
+const flicker = new THREE.PointLight(0xffa05a, 0.0, 3, 2); scene.add(flicker);
+
+// Hair/scalp are drawn the way the game files draw them (Baked/.../Hair_Transparency_Pbr_1st_Pass.mat + _2nd_Pass.mat):
+//   pass 1 = alpha-clip 0.666, opaque, writes depth  -> the solid core of the strands / hair cap
+//   pass 2 = alpha-clip 0.01,  soft-blended, no depth write -> all the fine, semi-transparent strands around it
+// A single pass at cutoff 0.25 (the old setup, ?hair=single) throws away every texel under 25 % alpha and, because those texels are
+// mip-averaged, the thin front strands vanish with distance -> she looked bald at the hairline. HAIR_MODE=two is the default.
+const HAIR_MODE = qs.get('hair') === 'single' ? 'single' : 'two';
+const hairMeshes = [];
+const SCALP_CUT = qs.get('scalpcut') ? +qs.get('scalpcut') : 0.3;   // scalp cap: the texture's own parting slit is only ~50 % alpha, so 0.666 punched a bright skin stripe through it
+function setupHairTwoPass(o) {
+  const src = o.material;
+  const solid = src.clone(); solid.name = src.name + '_pass1';
+  solid.transparent = false; solid.alphaTest = /^Scalp_/.test(src.name) ? SCALP_CUT : 0.666; solid.depthWrite = true; solid.alphaToCoverage = true; solid.side = THREE.DoubleSide; solid.needsUpdate = true;
+  const soft = src.clone(); soft.name = src.name + '_pass2';
+  soft.transparent = true; soft.alphaTest = 0.01; soft.depthWrite = false; soft.side = THREE.DoubleSide; soft.needsUpdate = true;
+  o.material = solid; o.renderOrder = 0;
+  const o2 = o.clone(); o2.material = soft; o2.name = o.name + '_soft'; o2.frustumCulled = false; o2.renderOrder = 5;
+  o.parent.add(o2);
+  clara.hairPass2 = clara.hairPass2 || []; clara.hairPass2.push(o2);
+}
+
+const clara = { root: null, meshes: [], morphMeshes: [], jaw: null, jawRest: null, head: null, headRest: null, neck: null, neckRest: null, spine: null, spineRest: null };
+const lip = new LipSync();
+let focus = new THREE.Vector3(0, 1.5, 0), camDist = 1.2;
+
+const gltfLoader = new GLTFLoader(); gltfLoader.setMeshoptDecoder(MeshoptDecoder);
+const loadingEl = document.getElementById('loading'), t_load0 = performance.now();
+gltfLoader.load(CONFIG.glb, gltf => {
+  const root = gltf.scene; clara.root = root; scene.add(root);
+  root.traverse(o => {
+    if (o.isBone || o.type === 'Bone') {
+      if (o.name === 'CC_Base_JawRoot') { clara.jaw = o; clara.jawRest = o.quaternion.clone(); }
+      if (o.name === 'CC_Base_Head') { clara.head = o; clara.headRest = o.quaternion.clone(); }
+      if (o.name === 'CC_Base_NeckTwist01') { clara.neck = o; clara.neckRest = o.quaternion.clone(); }
+      if (o.name === 'CC_Base_Spine02') { clara.spine = o; clara.spineRest = o.quaternion.clone(); }
+    }
+    if (!o.isMesh) return;
+    o.frustumCulled = false;
+    clara.meshes.push(o);
+    // every mesh that has any of our morph targets gets the same influences (body, teeth, tongue, eye occlusion, tear line)
+    if (o.morphTargetDictionary) clara.morphMeshes.push(o);
+    const mats = Array.isArray(o.material) ? o.material : [o.material];
+    mats.forEach(m => {
+      if (/^(Hair|Scalp)_/.test(m.name) || /hair/i.test(o.name)) { if (HAIR_MODE === 'single') { m.transparent = true; m.alphaTest = 0.25; m.depthWrite = true; m.needsUpdate = true; } else hairMeshes.push(o); }
+      if (m.envMapIntensity !== undefined) m.envMapIntensity = 0.5;
+    });
+  });
+  hairMeshes.forEach(setupHairTwoPass);
+  // bust framing from the head bone
+  root.updateMatrixWorld(true);
+  const hp = new THREE.Vector3(); (clara.head || root).getWorldPosition(hp);
+  focus.set(hp.x, hp.y - 0.005, hp.z);
+  fitCamera();
+  document.getElementById('loading').classList.add('done');
+  window.__claraReady = true; window.__loadMs = Math.round(performance.now() - t_load0);
+}, ev => { if (ev && ev.total) loadingEl.textContent = 'Lighting a match... ' + Math.round(100 * ev.loaded / ev.total) + '%'; }, err => { document.getElementById('loading').textContent = 'Could not load Clara: ' + (err.message || err); window.__claraError = String(err); });
+
+function fitCamera() {
+  const stage = canvas.parentElement, w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / h;
+  // bust: ~0.62 m tall window (top of hair to upper chest); widen if the stage is narrow
+  const winH = 0.45, winW = 0.42;
+  const dV = (winH / 2) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const hfov = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
+  const dH = (winW / 2) / Math.tan(hfov / 2);
+  camDist = Math.max(dV, dH);
+  camera.position.set(focus.x, focus.y + 0.005, focus.z + camDist);
+  camera.lookAt(focus.x, focus.y, focus.z);
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(fitCamera).observe(canvas.parentElement);
+
+// ---------------------------------------------------------------- idle: blink + sway, and applying lip-sync
+const blink = { next: 1.5 + Math.random() * 3, t: -1 };
+const qTmp = new THREE.Quaternion(), eTmp = new THREE.Euler();
+function setMorph(name, val) {
+  for (const m of clara.morphMeshes) { const i = m.morphTargetDictionary[name]; if (i !== undefined) m.morphTargetInfluences[i] = val; }
+}
+function applyFrame(time, dt) {
+  // blinks: random every 2-6 s, ~160 ms, occasional double blink
+  blink.next -= dt; if (qs.has('still')) blink.next = 99;
+  if (blink.t < 0 && blink.next <= 0) { blink.t = 0; blink.next = 2 + Math.random() * 4; if (Math.random() < 0.18) blink.next = 0.35; }
+  let b = 0; if (blink.t >= 0) { blink.t += dt; const p = blink.t / 0.16; b = p < 0.4 ? p / 0.4 : Math.max(0, 1 - (p - 0.4) / 0.6); if (p >= 1) blink.t = -1; }
+  setMorph('Eye_Blink_L', b); setMorph('Eye_Blink_R', b * 0.97);
+  // mouth
+  for (const n of MORPH_NAMES) setMorph(n, lip.v[n]);
+  if (clara.jaw) { // rotate about the bone's local z, on top of its rest pose
+    qTmp.setFromAxisAngle(new THREE.Vector3(0, 0, 1), lip.jawAngle * JAW_SIGN);
+    clara.jaw.quaternion.copy(clara.jawRest).multiply(qTmp);
+  }
+  // subtle head sway (a bit livelier while she's talking)
+  const talk = Math.min(1, lip.level * 2);
+  const sx = Math.sin(time * 0.55) * 0.012 + Math.sin(time * 1.3) * 0.004 + talk * Math.sin(time * 2.3) * 0.012;
+  const sy = Math.sin(time * 0.37 + 1) * 0.03 + talk * Math.sin(time * 1.7) * 0.02;
+  const sz = Math.sin(time * 0.29 + 2) * 0.012;
+  if (clara.head) { eTmp.set(sx, sy, sz); qTmp.setFromEuler(eTmp); clara.head.quaternion.copy(clara.headRest).multiply(qTmp); }
+  if (clara.neck) { eTmp.set(sx * 0.4, sy * 0.5, sz * 0.4); qTmp.setFromEuler(eTmp); clara.neck.quaternion.copy(clara.neckRest).multiply(qTmp); }
+  if (clara.spine) { eTmp.set(Math.sin(time * 0.8) * 0.004, 0, Math.sin(time * 0.45) * 0.004); qTmp.setFromEuler(eTmp); clara.spine.quaternion.copy(clara.spineRest).multiply(qTmp); }
+  flicker.intensity = 0.0;
+  key.intensity = 2.1 + Math.sin(time * 9.1) * 0.05 + Math.sin(time * 23.7) * 0.04;
+}
+let JAW_SIGN = qs.get('jawsign') ? +qs.get('jawsign') : 1;  // calibrated visually (previews/calib_zoom_grid.png): +local z rotation opens the mouth in this rig
+
+// ---------------------------------------------------------------- audio source for lip-sync
+// Source = () => Uint8Array spectrum in the SDK's layout (1024 bins, 100..8000 Hz), or null when silent.
+let spectrumSource = null;
+let synthMouth = null;   // text-only fallback: fake spectrum envelope
+const FALLBACK_BUF = new Uint8Array(1024);
+function currentSpectrum() {
+  if (spectrumSource) return spectrumSource();
+  if (synthMouth) return synthMouth();
+  return null;
+}
+
+let last = performance.now(), t0 = last, simTime = 0, lastDraw = 0, slowMs = 0, slowN = 0, adaptCooldown = 0;
+const talking = () => active || synthMouth;
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  if (clara.root) {
+    let spec = null; try { spec = currentSpectrum(); } catch (e) { spec = null; }
+    lip.update(spec, dt);
+    applyFrame(qs.has('still') ? 0 : (now - t0) / 1000, qs.has('still') ? 0 : dt);
+  }
+  // phones: idle breathing/sway only needs ~30 fps (saves battery + heat); while a conversation is live we draw every frame so the lips stay tight
+  const skip = IS_MOBILE && !talking() && now - lastDraw < 30;
+  if (!window.__noRender && !skip) {
+    renderer.render(scene, camera); lastDraw = now;
+    // adaptive quality: if the average frame takes > 38 ms (< ~26 fps) over 45 frames, drop the pixel ratio a step (min 0.75); never goes back up mid-session
+    if (clara.root && !qs.has('noadapt') && now > adaptCooldown && dt > 0) {
+      slowMs += dt * 1000; slowN++;
+      if (slowN >= 45) {
+        if (slowMs / slowN > 38 && pr > 0.75) { pr = Math.max(0.75, +(pr - 0.25).toFixed(2)); renderer.setPixelRatio(pr); fitCamera(); adaptCooldown = now + 2500; window.__adapted = (window.__adapted || 0) + 1; }
+        slowMs = 0; slowN = 0;
+      }
+    }
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------------------------------------------------------------- conversation UI
+const $ = id => document.getElementById(id);
+const typeBtn = $('typeonly'), talkBtn = $('talk'), statusEl = $('status'), logEl = $('log'), form = $('textform'), txt = $('txt');
+let conv = null, active = false, textMode = false, lastClaraMsg = null;
+function say(who, text, cls) {
+  const d = document.createElement('div'); d.className = 'msg ' + cls;
+  if (who) { const w = document.createElement('span'); w.className = 'who'; w.textContent = who; d.appendChild(w); }
+  const t = document.createElement('span'); t.className = 't'; t.textContent = text; d.appendChild(t);
+  logEl.appendChild(d); logEl.scrollTop = logEl.scrollHeight; return d;
+}
+const setStatus = s => { statusEl.textContent = s; };
+const transcript = []; window.__transcript = transcript;
+
+function pseudoSpeech(text) {   // text-only mode: animate a plausible mouth for the length of the line
+  const dur = Math.min(8, 0.6 + text.length * 0.055), start = performance.now();
+  synthMouth = () => {
+    const t = (performance.now() - start) / 1000; if (t > dur) { synthMouth = null; return null; }
+    const syl = Math.abs(Math.sin(t * 9.5)) * (0.55 + 0.45 * Math.abs(Math.sin(t * 3.1)));
+    const centre = 600 + 900 * Math.abs(Math.sin(t * 4.3));
+    for (let i = 0; i < 1024; i++) { const hz = 100 + i * 7.71; FALLBACK_BUF[i] = Math.max(0, Math.min(255, 255 * (0.12 + 0.62 * syl * Math.exp(-Math.pow((hz - centre) / 900, 2))))); }
+    return FALLBACK_BUF;
+  };
+}
+
+async function getSessionAuth() {
+  if (CONFIG.signedUrlEndpoint) {   // production path: server holds the API key, page gets a short-lived signed URL
+    const r = await fetch(CONFIG.signedUrlEndpoint, { credentials: 'omit' }); if (!r.ok) throw new Error('signed url request failed: ' + r.status);
+    const j = await r.json(); return { signedUrl: j.signed_url };
+  }
+  return { agentId: CONFIG.agentId, connectionType: CONFIG.connectionType };
+}
+
+// iOS Safari only lets audio start from inside a user gesture, so the click handler unlocks an AudioContext + a silent <audio> synchronously, before any await
+let audioCtx = null, preStream = null;
+const dropPreStream = () => { if (preStream) { preStream.getTracks().forEach(t => t.stop()); preStream = null; } };
+function unlockAudio() {
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) { audioCtx = audioCtx || new AC(); if (audioCtx.state === 'suspended') audioCtx.resume(); const b = audioCtx.createBuffer(1, 1, 22050), src = audioCtx.createBufferSource(); src.buffer = b; src.connect(audioCtx.destination); src.start(0); }
+    const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='); a.setAttribute('playsinline', ''); a.play().catch(() => {});
+  } catch (e) { /* best effort */ }
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden && audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(() => {}); });
+const hasMic = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && window.isSecureContext !== false;
+
+async function start(forceText) {
+  if (!forceText && !hasMic()) forceText = true;   // no mic API at all (insecure origin / old WebView): straight to text mode
+  setStatus(forceText ? 'Connecting (text)...' : 'Asking for your microphone...');
+  talkBtn.disabled = true; typeBtn.disabled = true;
+  try {
+    if (!forceText) {
+      // ask for the mic up front so a denial gives a clean fallback instead of a half-open session
+      if (!(DEBUG && qs.has('nomicprompt'))) {
+        let perm = 'prompt'; try { perm = (await navigator.permissions.query({ name: 'microphone' })).state; } catch (e) { /* Safari < 16: no query support */ }
+        if (perm === 'denied') { const err = new Error('microphone permission denied'); err.name = 'NotAllowedError'; throw err; }
+        // hold this stream until the SDK has its own: iOS Safari then reuses the grant instead of prompting a second time
+        preStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      }
+    }
+    setStatus('Connecting...');
+    const auth = await getSessionAuth();
+    const opts = {
+      ...auth,
+      ...(forceText ? { textOnly: true } : {}),
+      onConnect: () => { dropPreStream(); active = true; typeBtn.style.visibility = 'hidden'; talkBtn.classList.add('live'); talkBtn.textContent = 'End conversation'; talkBtn.disabled = false; setStatus(forceText ? 'Connected. Type below.' : 'Listening...'); form.hidden = false; if (window.__onConnect) window.__onConnect(); },
+      onDisconnect: d => { cleanup(d && d.reason === 'error' ? 'The line went dead. Try again in a moment.' : 'Conversation ended.'); },
+      onError: (m, ctx) => { console.warn('convai error', m, ctx); say('', 'Something went wrong: ' + (typeof m === 'string' ? m : 'connection error'), 'sys'); transcript.push({ role: 'error', text: String(m) }); },
+      onModeChange: ({ mode }) => { lip.mute = (mode !== 'speaking'); if (!textMode) setStatus(mode === 'speaking' ? 'Clara is talking...' : 'Listening...'); },
+      onMessage: ({ message, role }) => {
+        if (!message || (role !== 'agent' && !/[a-z0-9]/i.test(message))) return;   // ignore empty/'...' mic noise lines
+        transcript.push({ role, text: message });
+        if (role === 'agent') { say('Clara', message, 'clara'); if (textMode) pseudoSpeech(message); }
+        else say('You', message, 'you');
+      },
+    };
+    textMode = !!forceText;
+    conv = await Conversation.startSession(opts);
+    window.__conv = conv;
+    if (!textMode) spectrumSource = () => (conv && conv.getOutputByteFrequencyData) ? (conv.getOutputVolume() > 0.002 ? conv.getOutputByteFrequencyData() : null) : null;
+  } catch (e) {
+    console.warn('start failed', e);
+    const denied = e && (e.name === 'NotAllowedError' || e.name === 'NotFoundError' || e.name === 'NotReadableError' || e.name === 'OverconstrainedError' || e instanceof TypeError || /permission|denied/i.test(String(e.message)));
+    cleanup(null);
+    if (denied && !forceText) {
+      say('', 'No microphone. You can type to Clara instead.', 'sys'); setStatus('Microphone blocked, switching to text...');
+      return start(true);
+    }
+    say('', 'Could not start the conversation: ' + (e && e.message ? e.message : e), 'sys'); setStatus('Could not connect.');
+    transcript.push({ role: 'error', text: String(e && e.message || e) });
+  }
+}
+function cleanup(msg) {
+  dropPreStream();
+  active = false; spectrumSource = null; conv = null; talkBtn.disabled = false; typeBtn.disabled = false; typeBtn.style.visibility = ''; talkBtn.classList.remove('live'); talkBtn.textContent = 'Talk to Clara';
+  if (msg) { setStatus(msg); say('', msg, 'sys'); }
+}
+async function stop() { try { if (conv) await conv.endSession(); } catch (e) {} cleanup('Conversation ended.'); }
+talkBtn.addEventListener('click', () => { if (active) stop(); else { unlockAudio(); start(false); } });
+typeBtn.addEventListener('click', () => { unlockAudio(); start(true); });
+form.addEventListener('submit', e => {
+  e.preventDefault(); const v = txt.value.trim(); if (!v || !conv) return; txt.value = '';
+  try { conv.sendUserMessage(v); transcript.push({ role: 'user', text: v, typed: true }); say('You', v, 'you'); } catch (err) { say('', 'Could not send.', 'sys'); }
+});
+// Greeting line in the log (transcript fallback): the agent's first message appears via onMessage once connected.
+
+// ---------------------------------------------------------------- debug / self-test hooks
+if (DEBUG) {
+  window.__clara = { THREE, scene, camera, renderer, clara, lip, setSpectrumSource: f => { spectrumSource = f; }, resampleVoiceRange, MORPH_NAMES, JAW_BONE_MAX_RAD,
+    morphSnapshot: () => { const o = {}; for (const m of clara.morphMeshes) { const key = m.name.replace(/_\d+$/, ''); o[key] = o[key] || {}; const oo = o[key]; for (const n of MORPH_NAMES.concat(['Eye_Blink_L'])) { const i = m.morphTargetDictionary[n]; if (i !== undefined) oo[n] = Math.max(oo[n] || 0, +m.morphTargetInfluences[i].toFixed(3)); } } return o; },
+    jawAngle: () => { if (!clara.jaw) return null; const q = clara.jawRest.clone().invert().multiply(clara.jaw.quaternion); return 2 * Math.atan2(q.z, q.w); },
+    pseudoSpeech };
+}
+</script>
+</body>
+</html>

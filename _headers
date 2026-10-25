@@ -1,0 +1,23 @@
+# Cloudflare Pages / Netlify header rules (GitHub Pages ignores this file; see README for what changes there)
+/*
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Content-Type-Options: nosniff
+  X-Robots-Tag: noindex, nofollow
+
+/index.html
+  Cache-Control: no-cache
+/embed.html
+  Cache-Control: no-cache
+  # No X-Frame-Options. frame-ancestors lists who may embed it (includes Squarespace's editor preview, which is an ancestor frame too).
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' https://api.elevenlabs.io https://api.us.elevenlabs.io wss://api.elevenlabs.io wss://api.us.elevenlabs.io https://*.elevenlabs.io wss://*.elevenlabs.io blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors https://www.guillotine.tv https://guillotine.tv https://*.squarespace.com
+/config.js
+  Cache-Control: no-cache
+/*.glb
+  Cache-Control: public, max-age=31536000, immutable
+  Access-Control-Allow-Origin: *
+/*.jpg
+  Cache-Control: public, max-age=31536000, immutable
+/vendor/*
+  Cache-Control: public, max-age=86400
+/clara-lipsync.js
+  Cache-Control: no-cache
